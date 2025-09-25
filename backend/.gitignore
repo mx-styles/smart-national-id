@@ -1,0 +1,38 @@
+.env
+.env.development
+.env.production
+.venv
+venv/
+env/
+cert/
+
+# Database
+db.sqlite3
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# Django
+*.log
+local_settings.py
+media/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Deployment
+.vercel
+datadump*
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
