@@ -1,22 +1,56 @@
+import logging
 from datetime import datetime, timedelta
-from typing import Optional, Union
+from typing import Optional
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import HTTPException, status, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+
 from .config import settings
 from .database import get_db
 from ..models.user import User, UserRole
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+logger = logging.getLogger("app.security")
+
+pwd_context = CryptContext(
+    schemes=["bcrypt_sha256", "bcrypt"],
+    deprecated="auto",
+    bcrypt_sha256__rounds=12,
+)
 security = HTTPBearer()
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: Optional[str], hashed_password: Optional[str]) -> bool:
+    if not plain_password or not hashed_password:
+        return False
+
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except ValueError as exc:  # pragma: no cover - defensive guard
+        message = str(exc)
+        logger.warning("Password verification error: %s", message)
+        if "longer than 72 bytes" in message:
+            truncated = plain_password[:72]
+            logger.debug("Retrying verification with truncated password for bcrypt compatibility")
+            try:
+                return pwd_context.verify(truncated, hashed_password)
+            except ValueError:
+                return False
+        return False
 
 def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
+
+
+def needs_password_rehash(hashed_password: Optional[str]) -> bool:
+    if not hashed_password:
+        return True
+    try:
+        return pwd_context.needs_update(hashed_password)
+    except ValueError:
+        logger.debug("Password hash could not be parsed; marking for rehash")
+        return True
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()

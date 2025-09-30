@@ -7,7 +7,8 @@ from .security import (
     verify_token,
     get_current_user,
     get_current_active_user,
-    get_admin_user
+    get_admin_user,
+    needs_password_rehash,
 )
 
 __all__ = [
@@ -22,5 +23,6 @@ __all__ = [
     "verify_token",
     "get_current_user",
     "get_current_active_user",
-    "get_admin_user"
+    "get_admin_user",
+    "needs_password_rehash",
 ]

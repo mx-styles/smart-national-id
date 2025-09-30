@@ -3,12 +3,13 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from app.core import (
-    get_db, 
-    verify_password, 
-    get_password_hash, 
+    get_db,
+    verify_password,
+    get_password_hash,
     create_access_token,
     settings,
-    get_current_active_user
+    get_current_active_user,
+    needs_password_rehash,
 )
 from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, Token, UserLogin
@@ -85,10 +86,17 @@ async def login_user(
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     
-    # Update last login
+    # Update last login & upgrade weak hashes
     from datetime import datetime
+    password_refreshed = False
+    if needs_password_rehash(user.hashed_password):
+        user.hashed_password = get_password_hash(form_data.password)
+        password_refreshed = True
+
     user.last_login = datetime.utcnow()
     db.commit()
+    if password_refreshed:
+        db.refresh(user)
     
     # Log audit action
     log_audit_action(
@@ -129,10 +137,17 @@ async def login_user_email(user_data: UserLogin, db: Session = Depends(get_db)):
         data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     
-    # Update last login
+    # Update last login & upgrade weak hashes
     from datetime import datetime
+    password_refreshed = False
+    if needs_password_rehash(user.hashed_password):
+        user.hashed_password = get_password_hash(user_data.password)
+        password_refreshed = True
+
     user.last_login = datetime.utcnow()
     db.commit()
+    if password_refreshed:
+        db.refresh(user)
     
     # Log audit action
     log_audit_action(

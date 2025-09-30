@@ -21,15 +21,27 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS middleware (development: allow everything)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
-    expose_headers=["*"],
-)
+# CORS middleware
+cors_origins = settings.cors_origins
+cors_kwargs = {
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+    "expose_headers": ["*"],
+}
+
+if "*" in cors_origins:
+    # When credentials are allowed, browsers expect a specific origin value.
+    cors_kwargs.update({
+        "allow_origins": cors_origins,
+        "allow_credentials": False,
+    })
+else:
+    cors_kwargs["allow_origins"] = cors_origins
+    if settings.allowed_origin_regex:
+        cors_kwargs["allow_origin_regex"] = settings.allowed_origin_regex
+
+app.add_middleware(CORSMiddleware, **cors_kwargs)
 
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
