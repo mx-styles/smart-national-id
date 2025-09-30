@@ -131,7 +131,7 @@ pip install -r requirements.txt
 # Setup environment variables
 cp .env.example .env
 # Edit .env file with your configuration
-#   - Update `ALLOWED_ORIGINS` with the domains that should talk to the API
+#   - Update `ALLOWED_ORIGINS` with the domains that should talk to the API (JSON array)
 
 # Create database and sample data
 python seed_data.py

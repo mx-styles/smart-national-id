@@ -4,7 +4,9 @@ from typing import List, Optional
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
+
     # Database
     database_url: str = "sqlite:///./queue_management.db"
     
@@ -65,7 +67,6 @@ class Settings(BaseSettings):
                 seen.add(origin)
                 origins.append(origin)
         return origins or ["http://localhost:3000"]
-
     class Config:
         env_file = ".env"
 
