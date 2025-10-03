@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AppBar,
   Avatar,
+  BottomNavigation,
+  BottomNavigationAction,
   Box,
   Button,
   Divider,
@@ -14,6 +16,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Paper,
   Stack,
   Toolbar,
   Typography,
@@ -34,12 +37,20 @@ import {
 import { alpha } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import type { SvgIconComponent } from '@mui/icons-material';
 
 const drawerWidth = 264;
 
 interface LayoutProps {
   children: React.ReactNode;
 }
+
+type MenuItemConfig = {
+  text: string;
+  path: string;
+  icon: SvgIconComponent;
+  mobile?: boolean;
+};
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -68,19 +79,44 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
-  const menuItems = [
-    { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
-    { text: 'Book Appointment', icon: <EventNote />, path: '/book-appointment' },
-    { text: 'My Appointments', icon: <EventAvailable />, path: '/appointments' },
-    { text: 'My Queue', icon: <Queue />, path: '/my-queue' }
-  ];
+  const userIsAdmin = isAdmin();
 
-  if (isAdmin()) {
-    menuItems.push(
-      { text: 'Admin Panel', icon: <AdminPanelSettings />, path: '/admin' },
-      { text: 'Service Centers', icon: <LocationCity />, path: '/service-centers' }
+  const menuItems = useMemo<MenuItemConfig[]>(() => {
+    const items: MenuItemConfig[] = [
+      { text: 'Dashboard', path: '/dashboard', icon: Dashboard },
+      { text: 'Book Appointment', path: '/book-appointment', icon: EventNote },
+      { text: 'My Appointments', path: '/appointments', icon: EventAvailable },
+      { text: 'My Queue', path: '/my-queue', icon: Queue }
+    ];
+
+    if (userIsAdmin) {
+      items.push(
+        { text: 'Admin Panel', path: '/admin', icon: AdminPanelSettings },
+        { text: 'Service Centers', path: '/service-centers', icon: LocationCity, mobile: false }
+      );
+    }
+
+    return items;
+  }, [userIsAdmin]);
+
+  const mobileNavItems = useMemo(
+    () => menuItems.filter((item) => item.mobile !== false),
+    [menuItems]
+  );
+
+  const activeMenuItem = useMemo(() => {
+    if (location.pathname === '/') {
+      return menuItems.find((item) => item.path === '/dashboard') ?? menuItems[0];
+    }
+
+    return (
+      [...menuItems]
+        .sort((a, b) => b.path.length - a.path.length)
+        .find((item) => location.pathname.startsWith(item.path)) ?? menuItems[0]
     );
-  }
+  }, [location.pathname, menuItems]);
+
+  const activeNavValue = activeMenuItem?.path ?? '/dashboard';
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', py: 3 }}>
@@ -95,7 +131,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <Divider sx={{ borderColor: alpha('#f8fafc', 0.08), mb: 2 }} />
       <List sx={{ px: 1, flex: 1, display: 'grid', gap: 0.5 }}>
         {menuItems.map((item) => {
-          const selected = location.pathname === item.path;
+          const IconComponent = item.icon;
+          const selected =
+            location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
           return (
             <ListItem key={item.text} disablePadding sx={{ mt: 0.5 }}>
               <ListItemButton
@@ -125,7 +163,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   }
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 42 }}>{item.icon}</ListItemIcon>
+                <ListItemIcon sx={{ minWidth: 42 }}>
+                  <IconComponent fontSize="small" />
+                </ListItemIcon>
                 <ListItemText primary={item.text} primaryTypographyProps={{ fontWeight: selected ? 600 : 500 }} />
               </ListItemButton>
             </ListItem>
@@ -179,7 +219,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           boxShadow: '0px 10px 30px rgba(15, 23, 42, 0.25)'
         }}
       >
-        <Toolbar sx={{ minHeight: 72, px: { xs: 2, md: 4 } }}>
+        <Toolbar sx={{ minHeight: 72, px: { xs: 1.5, md: 4 } }}>
           <IconButton
             color="inherit"
             aria-label="open drawer"
@@ -189,12 +229,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="subtitle2" sx={{ color: alpha('#cbd5f5', 0.85) }}>
-              Today
-            </Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              Queue Management Platform
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography
+              component="h1"
+              sx={{
+                fontWeight: 700,
+                typography: { xs: 'h6', sm: 'h5' },
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              {isMobile ? activeMenuItem?.text ?? 'Smart e-National ID' : 'Queue Management Platform'}
             </Typography>
           </Box>
           <Stack direction="row" spacing={2} alignItems="center">
@@ -264,8 +310,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           flexGrow: 1,
           width: { md: `calc(100% - ${drawerWidth}px)` },
           minHeight: '100vh',
-          px: { xs: 2, md: 4 },
-          pb: { xs: 6, md: 8 }
+          px: { xs: 1.5, sm: 2.5, md: 4 },
+          pb: { xs: `calc(${theme.spacing(11)} + env(safe-area-inset-bottom))`, md: 8 }
         }}
       >
         <Toolbar sx={{ minHeight: 72 }} />

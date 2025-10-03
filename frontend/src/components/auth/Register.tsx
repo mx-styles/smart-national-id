@@ -25,6 +25,51 @@ interface RegisterFormData {
   nationalId: string;
 }
 
+const textFieldStyles = {
+  '& .MuiInputLabel-root': {
+    color: 'rgba(248, 250, 252, 0.72)',
+    '&.Mui-focused': {
+      color: '#f8fafc'
+    },
+    '&.MuiInputLabel-shrink': {
+      color: '#f8fafc'
+    }
+  },
+  '& .MuiOutlinedInput-root': {
+    color: '#f8fafc',
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    borderRadius: 18,
+    transition: 'all .2s ease-in-out',
+    '& fieldset': {
+      borderColor: 'rgba(148, 163, 184, 0.35)'
+    },
+    '&:hover fieldset': {
+      borderColor: 'rgba(191, 219, 254, 0.55)'
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#bfdbfe',
+      boxShadow: '0 0 0 2px rgba(191, 219, 254, 0.25)'
+    },
+    '&.Mui-error fieldset': {
+      borderColor: 'rgba(248, 113, 113, 0.7)'
+    },
+    '&.Mui-error.Mui-focused fieldset': {
+      borderColor: '#fca5a5',
+      boxShadow: '0 0 0 2px rgba(248, 113, 113, 0.2)'
+    }
+  },
+  '& .MuiInputBase-input': {
+    color: '#f8fafc',
+    padding: '14px 16px',
+    '::placeholder': {
+      color: 'rgba(248, 250, 252, 0.62)'
+    }
+  },
+  '& .MuiFormHelperText-root': {
+    color: 'rgba(248, 250, 252, 0.7)'
+  }
+} as const;
+
 const Register: React.FC = () => {
   const [formData, setFormData] = useState<RegisterFormData>({
     email: '',
@@ -106,7 +151,7 @@ const Register: React.FC = () => {
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6 }}>
         <Container component="main" maxWidth="xs">
-          <Paper elevation={0} sx={{ p: 4, borderRadius: 4, textAlign: 'center', backdropFilter: 'blur(16px)', backgroundColor: 'rgba(15, 23, 42, 0.8)', color: '#f8fafc' }}>
+          <Paper elevation={0} sx={{ p: 4, borderRadius: { xs: 3, sm: 4 }, textAlign: 'center', backdropFilter: 'blur(16px)', backgroundColor: 'rgba(15, 23, 42, 0.8)', color: '#f8fafc' }}>
             <Alert severity="success" sx={{ mb: 2 }}>
               Registration successful! Redirecting to login...
             </Alert>
@@ -127,7 +172,7 @@ const Register: React.FC = () => {
           sx={{
             px: { xs: 3, md: 6 },
             py: { xs: 4, md: 6 },
-            borderRadius: 5,
+            borderRadius: { xs: 3, md: 5 },
             backdropFilter: 'blur(18px)',
             backgroundColor: 'rgba(15, 23, 42, 0.8)',
             color: '#f8fafc',
@@ -166,6 +211,7 @@ const Register: React.FC = () => {
                   value={formData.firstName}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={textFieldStyles}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -179,6 +225,7 @@ const Register: React.FC = () => {
                   value={formData.lastName}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={textFieldStyles}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -193,6 +240,7 @@ const Register: React.FC = () => {
                   value={formData.email}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={textFieldStyles}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -207,6 +255,7 @@ const Register: React.FC = () => {
                   value={formData.phone}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={textFieldStyles}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -220,6 +269,7 @@ const Register: React.FC = () => {
                   onChange={handleChange}
                   disabled={loading}
                   helperText="Optional - for existing ID holders"
+                  sx={textFieldStyles}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -235,6 +285,7 @@ const Register: React.FC = () => {
                   onChange={handleChange}
                   disabled={loading}
                   helperText="Minimum 6 characters"
+                  sx={textFieldStyles}
                 />
               </Grid>
               <Grid item xs={12}>
@@ -248,6 +299,7 @@ const Register: React.FC = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   disabled={loading}
+                  sx={textFieldStyles}
                 />
               </Grid>
             </Grid>
