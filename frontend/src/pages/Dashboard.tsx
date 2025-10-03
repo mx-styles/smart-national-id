@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Grid,
   Paper,
   Typography,
@@ -10,19 +9,22 @@ import {
   Box,
   Chip,
   Alert,
-  LinearProgress
+  LinearProgress,
+  Stack
 } from '@mui/material';
 import {
   EventAvailable,
   Schedule,
   LocationOn,
   Notifications,
-  Add as AddIcon
+  Add as AddIcon,
+  Queue
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { appointmentsAPI, queueAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import PageContainer from '../components/PageContainer';
 
 // Type definitions
 interface ServiceCenter {
@@ -305,9 +307,9 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <PageContainer title="Loading your personalized dashboard...">
         <LinearProgress />
-      </Container>
+      </PageContainer>
     );
   }
 
@@ -320,21 +322,41 @@ const Dashboard: React.FC = () => {
   ).slice(0, 3);
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Welcome Header */}
-      <Paper elevation={2} sx={{ p: 3, mb: 4, background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)' }}>
-        <Typography variant="h4" color="white" gutterBottom>
-          Welcome back, {user?.first_name}!
-        </Typography>
-        <Typography variant="h6" color="white" sx={{ opacity: 0.9 }}>
-          Manage your National ID appointments and queue status
-        </Typography>
-      </Paper>
-
+    <PageContainer
+      title={`Welcome back, ${user?.first_name ?? 'there'}!`}
+      description="Stay on top of your National ID journey with real-time queue tracking and appointment management."
+      actions={
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<AddIcon />}
+            onClick={() => navigate('/book-appointment')}
+          >
+            Book appointment
+          </Button>
+          <Button
+            variant="outlined"
+            color="inherit"
+            startIcon={<Queue />}
+            onClick={() => navigate('/my-queue')}
+            sx={{
+              borderColor: 'rgba(248, 250, 252, 0.4)',
+              color: '#f8fafc',
+              '&:hover': {
+                borderColor: 'rgba(248, 250, 252, 0.8)'
+              }
+            }}
+          >
+            View queue
+          </Button>
+        </Stack>
+      }
+    >
       <Grid container spacing={3}>
         {/* Quick Actions */}
         <Grid item xs={12} md={4}>
-          <Card sx={{ height: '100%' }}>
+          <Card sx={{ height: '100%', backdropFilter: 'blur(8px)' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
                 Quick Actions
@@ -480,7 +502,7 @@ const Dashboard: React.FC = () => {
           </Paper>
         </Grid>
       </Grid>
-    </Container>
+    </PageContainer>
   );
 };
 

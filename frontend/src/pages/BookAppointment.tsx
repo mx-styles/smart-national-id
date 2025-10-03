@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Paper,
   Typography,
   TextField,
@@ -25,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import dayjs, { Dayjs } from 'dayjs';
 import { appointmentsAPI, serviceCentersAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import PageContainer from '../components/PageContainer';
 
 // Type definitions
 interface ServiceCenter {
@@ -242,22 +242,37 @@ const BookAppointment: React.FC = () => {
 
   if (loadingCenters) {
     return (
-      <Container maxWidth="md" sx={{ mt: 4, textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>Loading service centers...</Typography>
-      </Container>
+      <PageContainer title="Fetching service centers...">
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress />
+          <Typography sx={{ mt: 2 }}>
+            Preparing availability and operating hours.
+          </Typography>
+        </Box>
+      </PageContainer>
     );
   }
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography variant="h4" gutterBottom align="center">
-            Book Appointment
+      <PageContainer
+        title="Book an appointment"
+        description="Choose a service centre, pick a timeslot within operating hours, and we'll handle the rest."
+        actions={
+          selectedCenter && (
+            <Button variant="contained" color="secondary" onClick={() => navigate('/appointments')}>
+              View my appointments
+            </Button>
+          )
+        }
+        maxWidth="md"
+      >
+        <Paper elevation={0} sx={{ p: { xs: 3, md: 4 } }}>
+          <Typography variant="h5" gutterBottom>
+            Appointment details
           </Typography>
-          <Typography variant="body1" color="text.secondary" align="center" sx={{ mb: 4 }}>
-            Schedule your National ID service appointment
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+            Select your preferred centre, date, and time to reserve your slot.
           </Typography>
 
           {error && (
@@ -445,7 +460,7 @@ const BookAppointment: React.FC = () => {
             </Grid>
           </Box>
         </Paper>
-      </Container>
+      </PageContainer>
     </LocalizationProvider>
   );
 };

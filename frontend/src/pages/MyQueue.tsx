@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Paper,
   Typography,
   Box,
@@ -15,7 +14,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress
+  CircularProgress,
+  Stack
 } from '@mui/material';
 import {
   Schedule,
@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 import { queueAPI, appointmentsAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import PageContainer from '../components/PageContainer';
 
 // Type definitions
 interface ServiceCenter {
@@ -199,36 +200,33 @@ const MyQueue: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <PageContainer title="Loading queue information...">
         <LinearProgress />
-        <Typography sx={{ mt: 2, textAlign: 'center' }}>Loading queue information...</Typography>
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Paper elevation={2} sx={{ p: 3, mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Box>
-            <Typography variant="h4" gutterBottom>
-              My Queue Status
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Real-time updates on your appointment queue position
-            </Typography>
-          </Box>
+    <PageContainer
+      title="My queue status"
+      description="Track live queue positions for all of your upcoming and in-progress appointments."
+      actions={
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           <Button
             variant="outlined"
-            startIcon={refreshing ? <CircularProgress size={20} /> : <Refresh />}
+            color="inherit"
+            startIcon={refreshing ? <CircularProgress size={18} /> : <Refresh />}
             onClick={handleRefresh}
             disabled={refreshing}
           >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            {refreshing ? 'Refreshing…' : 'Refresh'}
           </Button>
-        </Box>
-      </Paper>
+          <Button variant="contained" color="secondary" onClick={() => window.location.href = '/book-appointment'}>
+            Book appointment
+          </Button>
+        </Stack>
+      }
+    >
 
       {/* Queue Cards */}
       {queueData.length === 0 ? (
@@ -430,7 +428,7 @@ const MyQueue: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 };
 

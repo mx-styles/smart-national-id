@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Paper,
   Typography,
   Button,
@@ -28,7 +27,8 @@ import {
   CardActions,
   Tooltip,
   Fab,
-  InputAdornment
+  InputAdornment,
+  Stack
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -39,6 +39,7 @@ import {
   Email as EmailIcon,
   Schedule as ScheduleIcon,
   Group as GroupIcon,
+  Refresh,
   Visibility as ViewIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
@@ -47,6 +48,7 @@ import {
 import { adminAPI } from '../services/api';
 import { ServiceCenter, ServiceCenterFormData } from '../types';
 import { toast } from 'react-toastify';
+import PageContainer from '../components/PageContainer';
 
 interface ServiceCenterDialogState {
   open: boolean;
@@ -234,30 +236,39 @@ const ServiceCenters: React.FC = () => {
 
   if (loading) {
     return (
-      <Container>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <PageContainer title="Loading service centers...">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="320px">
           <CircularProgress />
         </Box>
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg">
-      <Box py={3}>
-        {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography variant="h4" component="h1">
-            Service Centers Management
-          </Typography>
+    <PageContainer
+      title="Service centre management"
+      description="Oversee nationwide centres, monitor capacity, and keep citizen services running smoothly."
+      actions={
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            startIcon={<Refresh />}
+            onClick={fetchServiceCenters}
+          >
+            Refresh list
+          </Button>
           <Button
             variant="contained"
+            color="secondary"
             startIcon={<AddIcon />}
             onClick={() => handleOpenDialog('create')}
           >
-            Add Service Center
+            Add service centre
           </Button>
-        </Box>
+        </Stack>
+      }
+    >
 
         {/* Search */}
         <Paper sx={{ p: 2, mb: 3 }}>
@@ -328,8 +339,8 @@ const ServiceCenters: React.FC = () => {
           </Grid>
         </Grid>
 
-        {/* Service Centers Table */}
-        <Paper>
+  {/* Service Centres Table */}
+  <Paper>
           <TableContainer>
             <Table>
               <TableHead>
@@ -710,8 +721,7 @@ const ServiceCenters: React.FC = () => {
             )}
           </DialogActions>
         </Dialog>
-      </Box>
-    </Container>
+    </PageContainer>
   );
 };
 

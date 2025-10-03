@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -20,20 +20,7 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import ServiceCenters from './pages/ServiceCenters';
 
-// Create theme
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-  },
-});
+import theme from './theme';
 
 function App() {
   return (
@@ -85,14 +72,10 @@ function App() {
         
         <ToastContainer
           position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
+          autoClose={4000}
+          hideProgressBar
           closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
+          theme="colored"
         />
       </AuthProvider>
     </ThemeProvider>

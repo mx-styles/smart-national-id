@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Paper,
   Typography,
   TextField,
@@ -16,7 +15,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Stack
 } from '@mui/material';
 import {
   Person,
@@ -31,6 +31,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import axios from 'axios';
+import PageContainer from '../components/PageContainer';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -224,29 +225,33 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        <Avatar
-          sx={{
-            width: 80,
-            height: 80,
-            mr: 3,
-            bgcolor: 'primary.main',
-            fontSize: '2rem'
-          }}
-        >
-          {user ? getInitials(user.first_name, user.last_name) : <AccountCircle />}
-        </Avatar>
-        <Box>
-          <Typography variant="h4" gutterBottom>
-            {user?.first_name} {user?.last_name}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            {user?.role?.replace('_', ' ').toUpperCase()} • {user?.email}
-          </Typography>
-        </Box>
-      </Box>
+    <PageContainer
+      title={
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems={{ xs: 'flex-start', sm: 'center' }}>
+          <Avatar
+            sx={{
+              width: 80,
+              height: 80,
+              bgcolor: 'secondary.main',
+              boxShadow: '0px 18px 36px rgba(15, 23, 42, 0.2)',
+              fontSize: '2rem'
+            }}
+          >
+            {user ? getInitials(user.first_name, user.last_name) : <AccountCircle />}
+          </Avatar>
+          <Box>
+            <Typography variant="h4" gutterBottom>
+              {user?.first_name} {user?.last_name}
+            </Typography>
+            <Typography variant="body1" sx={{ opacity: 0.8 }}>
+              {user?.role?.replace('_', ' ').toUpperCase()} • {user?.email}
+            </Typography>
+          </Box>
+        </Stack>
+      }
+      description="Update your contact information, change your password, and review important account details."
+      maxWidth="md"
+    >
 
       <Grid container spacing={3}>
         {/* Profile Information */}
@@ -505,7 +510,7 @@ const Profile: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 };
 

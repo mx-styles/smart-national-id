@@ -9,7 +9,8 @@ import {
   Box,
   Alert,
   CircularProgress,
-  Grid
+  Grid,
+  Stack
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -103,32 +104,46 @@ const Register: React.FC = () => {
 
   if (success) {
     return (
-      <Container component="main" maxWidth="xs">
-        <Box sx={{ marginTop: 8, textAlign: 'center' }}>
-          <Alert severity="success">
-            Registration successful! Redirecting to login...
-          </Alert>
-        </Box>
-      </Container>
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', py: 6 }}>
+        <Container component="main" maxWidth="xs">
+          <Paper elevation={0} sx={{ p: 4, borderRadius: 4, textAlign: 'center', backdropFilter: 'blur(16px)', backgroundColor: 'rgba(15, 23, 42, 0.8)', color: '#f8fafc' }}>
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Registration successful! Redirecting to login...
+            </Alert>
+            <Typography variant="body2" sx={{ opacity: 0.8 }}>
+              Sit tight while we send you to the sign in page.
+            </Typography>
+          </Paper>
+        </Container>
+      </Box>
     );
   }
 
   return (
-    <Container component="main" maxWidth="sm">
-      <Box
-        sx={{
-          marginTop: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Smart e-National ID
-          </Typography>
-          <Typography component="h2" variant="h5" align="center" color="text.secondary" gutterBottom>
-            Create Account
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', py: { xs: 6, md: 8 } }}>
+      <Container component="main" maxWidth="md">
+        <Paper
+          elevation={0}
+          sx={{
+            px: { xs: 3, md: 6 },
+            py: { xs: 4, md: 6 },
+            borderRadius: 5,
+            backdropFilter: 'blur(18px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+            color: '#f8fafc',
+            boxShadow: '0px 40px 80px rgba(15, 23, 42, 0.42)'
+          }}
+        >
+          <Stack spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
+            <Typography component="h1" variant="h4" sx={{ fontWeight: 700, textAlign: 'center' }}>
+              Smart e-National ID
+            </Typography>
+            <Typography variant="body1" sx={{ opacity: 0.8, textAlign: 'center', maxWidth: 520 }}>
+              Create your account to manage appointments, queue progress, and service centre visits with confidence.
+            </Typography>
+          </Stack>
+          <Typography component="h2" variant="h5" sx={{ fontWeight: 600, mb: 2, textAlign: 'center' }}>
+            Create account
           </Typography>
 
           {error && (
@@ -240,6 +255,7 @@ const Register: React.FC = () => {
               type="submit"
               fullWidth
               variant="contained"
+              color="secondary"
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
               startIcon={loading && <CircularProgress size={20} />}
@@ -247,14 +263,14 @@ const Register: React.FC = () => {
               {loading ? 'Creating Account...' : 'Sign Up'}
             </Button>
             <Box textAlign="center">
-              <Link component={RouterLink} to="/login" variant="body2">
+              <Link component={RouterLink} to="/login" variant="body2" sx={{ color: 'rgba(248, 250, 252, 0.8)' }}>
                 Already have an account? Sign in
               </Link>
             </Box>
           </Box>
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 

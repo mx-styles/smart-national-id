@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Typography,
   Paper,
   Box,
@@ -45,6 +44,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { appointmentsAPI, queueAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import PageContainer from '../components/PageContainer';
 
 // Type definitions
 interface ServiceCenter {
@@ -452,40 +452,38 @@ const Appointments: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <PageContainer title="Loading your appointments...">
         <LinearProgress />
-        <Typography variant="h6" sx={{ mt: 2, textAlign: 'center' }}>
-          Loading your appointments...
-        </Typography>
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          My Appointments
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+    <PageContainer
+      title="My appointments"
+      description="Stay organized with a consolidated view of your bookings, queue positions, and visit history."
+      actions={
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           <Button
             variant="outlined"
+            color="inherit"
             startIcon={refreshing ? <HourglassEmpty /> : <Refresh />}
             onClick={handleRefresh}
             disabled={refreshing}
           >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            {refreshing ? 'Refreshing…' : 'Refresh'}
           </Button>
           <Button
             variant="contained"
+            color="secondary"
             startIcon={<AddIcon />}
             onClick={() => navigate('/book-appointment')}
           >
-            Book New Appointment
+            Book appointment
           </Button>
-        </Box>
-      </Box>
+        </Stack>
+      }
+    >
 
       {/* Statistics Cards */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
@@ -888,7 +886,7 @@ const Appointments: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 };
 

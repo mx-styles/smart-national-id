@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Grid,
   Paper,
   Typography,
@@ -27,7 +26,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Stack
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -42,6 +42,7 @@ import {
 } from '@mui/icons-material';
 import { adminAPI, serviceCentersAPI } from '../services/api';
 import { toast } from 'react-toastify';
+import PageContainer from '../components/PageContainer';
 
 // Type definitions
 interface DashboardStats {
@@ -245,24 +246,30 @@ const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography sx={{ mt: 2 }}>Loading admin dashboard...</Typography>
-      </Container>
+      <PageContainer title="Loading admin dashboard...">
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress />
+          <Typography sx={{ mt: 2 }}>Preparing analytics and queue data.</Typography>
+        </Box>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Paper elevation={2} sx={{ p: 3, mb: 4, background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)' }}>
-        <Typography variant="h4" color="white" gutterBottom>
-          Admin Dashboard
-        </Typography>
-        <Typography variant="h6" color="white" sx={{ opacity: 0.9 }}>
-          Queue Management & Analytics
-        </Typography>
-      </Paper>
+    <PageContainer
+      title="Admin dashboard"
+      description="Gain instant visibility across service centres, manage live queues, and track performance trends."
+      actions={
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+          <Button variant="outlined" color="inherit" startIcon={<Refresh />} onClick={fetchDashboardData}>
+            Refresh stats
+          </Button>
+          <Button variant="contained" color="secondary" startIcon={<PlayArrow />} onClick={handleCallNext} disabled={queueData.length === 0}>
+            Call next customer
+          </Button>
+        </Stack>
+      }
+    >
 
       {/* Stats Cards */}
       {dashboardStats && (
@@ -548,7 +555,7 @@ const AdminDashboard: React.FC = () => {
           )}
         </DialogActions>
       </Dialog>
-    </Container>
+    </PageContainer>
   );
 };
 

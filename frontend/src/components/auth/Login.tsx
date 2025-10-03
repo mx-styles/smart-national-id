@@ -8,7 +8,8 @@ import {
   Link,
   Box,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Stack
 } from '@mui/material';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -57,21 +58,30 @@ const Login: React.FC = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom>
-            Smart e-National ID
-          </Typography>
-          <Typography component="h2" variant="h5" align="center" color="text.secondary" gutterBottom>
-            Sign In
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', py: { xs: 6, md: 8 } }}>
+      <Container component="main" maxWidth="sm">
+        <Paper
+          elevation={0}
+          sx={{
+            px: { xs: 3, md: 6 },
+            py: { xs: 4, md: 6 },
+            borderRadius: 5,
+            backdropFilter: 'blur(18px)',
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            color: '#f8fafc',
+            boxShadow: '0px 40px 80px rgba(15, 23, 42, 0.45)'
+          }}
+        >
+          <Stack spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
+            <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
+              Smart e-National ID
+            </Typography>
+            <Typography variant="body1" sx={{ opacity: 0.8, textAlign: 'center', maxWidth: 360 }}>
+              Seamless access to appointments, queue insights, and secure citizen services.
+            </Typography>
+          </Stack>
+          <Typography component="h2" variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+            Sign in
           </Typography>
 
           {error && (
@@ -80,7 +90,7 @@ const Login: React.FC = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: 'grid', gap: 2 }}>
             <TextField
               margin="normal"
               required
@@ -111,21 +121,22 @@ const Login: React.FC = () => {
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+              color="secondary"
+              sx={{ mt: 1, mb: 2 }}
               disabled={loading}
               startIcon={loading && <CircularProgress size={20} />}
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </Button>
             <Box textAlign="center">
-              <Link component={RouterLink} to="/register" variant="body2">
+              <Link component={RouterLink} to="/register" variant="body2" sx={{ color: 'rgba(248, 250, 252, 0.8)' }}>
                 {"Don't have an account? Sign Up"}
               </Link>
             </Box>
           </Box>
         </Paper>
-      </Box>
-    </Container>
+      </Container>
+    </Box>
   );
 };
 
