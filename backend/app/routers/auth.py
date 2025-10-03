@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -18,6 +20,7 @@ from app.models.audit_log import AuditAction
 from pydantic import BaseModel
 
 router = APIRouter()
+logger = logging.getLogger("app.auth")
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -67,7 +70,16 @@ async def login_user(
     # Find user by email
     user = db.query(User).filter(User.email == form_data.username).first()
     
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user:
+        logger.warning("Login failed: user not found", extra={"email": form_data.username})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not verify_password(form_data.password, user.hashed_password):
+        logger.warning("Login failed: password mismatch", extra={"email": form_data.username})
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -75,6 +87,7 @@ async def login_user(
         )
     
     if not user.is_active:
+        logger.warning("Login failed: inactive user", extra={"email": form_data.username})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user account"
@@ -119,13 +132,22 @@ async def login_user_email(user_data: UserLogin, db: Session = Depends(get_db)):
     # Find user by email
     user = db.query(User).filter(User.email == user_data.email).first()
     
-    if not user or not verify_password(user_data.password, user.hashed_password):
+    if not user:
+        logger.warning("Login failed (JSON): user not found", extra={"email": user_data.email})
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password"
+        )
+
+    if not verify_password(user_data.password, user.hashed_password):
+        logger.warning("Login failed (JSON): password mismatch", extra={"email": user_data.email})
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
         )
     
     if not user.is_active:
+        logger.warning("Login failed (JSON): inactive user", extra={"email": user_data.email})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Inactive user account"
