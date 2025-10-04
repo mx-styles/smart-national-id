@@ -15,6 +15,59 @@ from app.models.audit_log import AuditAction
 
 router = APIRouter()
 
+# More specific routes must come BEFORE general routes with path parameters
+# Otherwise FastAPI will match /queue/1/next to /queue/{service_center_id}
+
+@router.post("/queue/{service_center_id}/next")
+async def call_next_customer_endpoint(
+    service_center_id: int,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Call the next customer in queue (frontend compatibility endpoint)"""
+    
+    # Find next appointment in queue
+    next_appointment = db.query(Appointment).filter(
+        and_(
+            Appointment.service_center_id == service_center_id,
+            func.date(Appointment.appointment_date) == date.today(),
+            Appointment.status == AppointmentStatus.confirmed
+        )
+    ).order_by(Appointment.queue_position).first()
+    
+    if not next_appointment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No customers in queue"
+        )
+    
+    # Update appointment status
+    next_appointment.status = AppointmentStatus.in_progress
+    next_appointment.service_started_at = datetime.utcnow()
+    next_appointment.served_by_user_id = admin_user.id
+    
+    db.commit()
+    
+    # Log audit action
+    log_audit_action(
+        db=db,
+        action=AuditAction.call_next,
+        entity_type="appointment",
+        entity_id=next_appointment.id,
+        description=f"Called next customer: {next_appointment.ticket_number}",
+        user_id=admin_user.id,
+        target_user_id=next_appointment.user_id,
+        appointment_id=next_appointment.id,
+        service_center_id=service_center_id
+    )
+    
+    return {
+        "message": "Customer called successfully",
+        "ticket_number": next_appointment.ticket_number,
+        "customer_name": f"{next_appointment.user.first_name} {next_appointment.user.last_name}",
+        "appointment_type": next_appointment.appointment_type.value
+    }
+
 @router.get("/queue/{service_center_id}", response_model=List[AppointmentResponse])
 async def get_service_center_queue(
     service_center_id: int,
@@ -93,11 +146,6 @@ async def call_next_customer(
         "customer_name": f"{next_appointment.user.first_name} {next_appointment.user.last_name}",
         "appointment_type": next_appointment.appointment_type.value
     }
-
-# Compatibility route for frontend which calls POST /admin/queue/{service_center_id}/next
-@router.post("/queue/{service_center_id}/next")
-async def call_next_customer_alias(service_center_id: int, admin_user: User = Depends(get_admin_user), db: Session = Depends(get_db)):
-    return await call_next_customer(service_center_id, admin_user, db)
 
 @router.post("/queue/complete/{appointment_id}")
 async def complete_service(
