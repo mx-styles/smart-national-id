@@ -349,64 +349,13 @@ const AdminDashboard: React.FC = () => {
       <Paper sx={{ width: '100%' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
           <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
-            <Tab label="Appointments" />
             <Tab label="Queue Management" />
+            <Tab label="Appointments" />
           </Tabs>
         </Box>
 
-        {/* Appointments Tab */}
-        <TabPanel value={tabValue} index={0}>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Ticket #</TableCell>
-                  <TableCell></TableCell>
-                  <TableCell>Service Type</TableCell>
-                  <TableCell>Scheduled Time</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {appointments.map((appointment) => (
-                  <TableRow key={appointment.id}>
-                    <TableCell>{appointment.ticket_number}</TableCell>
-                    <TableCell>
-                      {appointment.user?.first_name} {appointment.user?.last_name}
-                    </TableCell>
-                    <TableCell>
-                      {appointment.appointment_type?.replace('_', ' ').toUpperCase()}
-                    </TableCell>
-                    <TableCell>{formatDateTime(appointment.scheduled_time)}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={appointment.status.replace('_', ' ').toUpperCase()}
-                        color={getStatusColor(appointment.status)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton
-                        size="small"
-                        onClick={() => setActionDialog({
-                          open: true,
-                          appointment: appointment,
-                          action: 'view'
-                        })}
-                      >
-                        <Visibility />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </TabPanel>
-
         {/* Queue Management Tab */}
-        <TabPanel value={tabValue} index={1}>
+        <TabPanel value={tabValue} index={0}>
           <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <FormControl sx={{ minWidth: 200 }}>
               <InputLabel>Service Center</InputLabel>
@@ -504,6 +453,57 @@ const AdminDashboard: React.FC = () => {
               </Table>
             </TableContainer>
           )}
+        </TabPanel>
+
+        {/* Appointments Tab */}
+        <TabPanel value={tabValue} index={1}>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Ticket #</TableCell>
+                  <TableCell></TableCell>
+                  <TableCell>Service Type</TableCell>
+                  <TableCell>Scheduled Time</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {appointments.map((appointment) => (
+                  <TableRow key={appointment.id}>
+                    <TableCell>{appointment.ticket_number}</TableCell>
+                    <TableCell>
+                      {appointment.user?.first_name} {appointment.user?.last_name}
+                    </TableCell>
+                    <TableCell>
+                      {appointment.appointment_type?.replace('_', ' ').toUpperCase()}
+                    </TableCell>
+                    <TableCell>{formatDateTime(appointment.scheduled_time)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={appointment.status.replace('_', ' ').toUpperCase()}
+                        color={getStatusColor(appointment.status)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <IconButton
+                        size="small"
+                        onClick={() => setActionDialog({
+                          open: true,
+                          appointment: appointment,
+                          action: 'view'
+                        })}
+                      >
+                        <Visibility />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </TabPanel>
 
       </Paper>
