@@ -31,7 +31,7 @@ A comprehensive digital queue management solution for ID registration centers in
 ## 🏗️ Tech Stack
 
 - **Frontend**: React 18 with TypeScript, Material-UI, React Router
-- **Backend**: FastAPI with Python 3.8+, SQLAlchemy ORM
+- **Backend**: FastAPI with Python 3.10, SQLAlchemy ORM
 - **Database**: SQLite (development), easily upgradeable to PostgreSQL
 - **Authentication**: JWT tokens with secure password hashing
 - **Real-time Communication**: WebSocket integration

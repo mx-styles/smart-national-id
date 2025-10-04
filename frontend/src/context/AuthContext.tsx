@@ -28,6 +28,7 @@ interface AuthContextType {
   updateUser: (userData: Partial<User>) => void;
   updateProfile: (profileData: any) => Promise<void>;
   isAdmin: () => boolean;
+  isAdminOrStaff: () => boolean;
   isAuthenticated: boolean;
 }
 
@@ -138,6 +139,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return !!(user && (user.role === 'admin' || user.role === 'staff'));
   };
 
+  const isAdminOrStaff = (): boolean => {
+    return !!(user && (user.role === 'admin' || user.role === 'staff'));
+  };
+
   const value = {
     user,
     token,
@@ -148,6 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateUser,
     updateProfile,
     isAdmin,
+    isAdminOrStaff,
     isAuthenticated: !!token && !!user
   };
 

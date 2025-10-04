@@ -5,7 +5,7 @@ import { CssBaseline } from '@mui/material';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -19,8 +19,33 @@ import MyQueue from './pages/MyQueue';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import ServiceCenters from './pages/ServiceCenters';
+import UserManagement from './pages/UserManagement';
 
 import theme from './theme';
+
+// Component to redirect admin/staff from citizen pages
+const CitizenRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const isAdminOrStaff = user?.role === 'admin' || user?.role === 'staff';
+  
+  if (isAdminOrStaff) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+// Component to handle default redirect based on role
+const DefaultRedirect: React.FC = () => {
+  const { user } = useAuth();
+  const isAdminOrStaff = user?.role === 'admin' || user?.role === 'staff';
+  
+  if (isAdminOrStaff) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  return <Navigate to="/dashboard" replace />;
+};
 
 function App() {
   return (
@@ -40,16 +65,40 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Routes>
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/book-appointment" element={<BookAppointment />} />
-                      <Route path="/appointments" element={<Appointments />} />
-                      <Route path="/my-queue" element={<MyQueue />} />
+                      <Route path="/dashboard" element={
+                        <CitizenRoute>
+                          <Dashboard />
+                        </CitizenRoute>
+                      } />
+                      <Route path="/book-appointment" element={
+                        <CitizenRoute>
+                          <BookAppointment />
+                        </CitizenRoute>
+                      } />
+                      <Route path="/appointments" element={
+                        <CitizenRoute>
+                          <Appointments />
+                        </CitizenRoute>
+                      } />
+                      <Route path="/my-queue" element={
+                        <CitizenRoute>
+                          <MyQueue />
+                        </CitizenRoute>
+                      } />
                       <Route path="/profile" element={<Profile />} />
                       <Route 
                         path="/admin" 
                         element={
                           <ProtectedRoute adminOnly>
                             <AdminDashboard />
+                          </ProtectedRoute>
+                        } 
+                      />
+                      <Route 
+                        path="/users" 
+                        element={
+                          <ProtectedRoute adminOnly>
+                            <UserManagement />
                           </ProtectedRoute>
                         } 
                       />
@@ -61,7 +110,7 @@ function App() {
                           </ProtectedRoute>
                         } 
                       />
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                      <Route path="/" element={<DefaultRedirect />} />
                     </Routes>
                   </Layout>
                 </ProtectedRoute>

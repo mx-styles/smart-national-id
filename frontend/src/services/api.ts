@@ -74,6 +74,14 @@ export const adminAPI = {
   createServiceCenter: (data: any) => api.post('/admin/service-centers', data),
   updateServiceCenter: (id: number, data: any) => api.put(`/admin/service-centers/${id}`, data),
   deleteServiceCenter: (id: number) => api.delete(`/admin/service-centers/${id}`),
+  // User Management
+  getUsers: () => api.get('/admin/users'),
+  getUser: (id: number) => api.get(`/admin/users/${id}`),
+  createUser: (data: any) => api.post('/admin/users', data),
+  updateUser: (id: number, data: any) => api.put(`/admin/users/${id}`, data),
+  deleteUser: (id: number) => api.delete(`/admin/users/${id}`),
+  toggleUserStatus: (id: number, isActive: boolean) => api.put(`/admin/users/${id}/status`, { is_active: isActive }),
+  resetUserPassword: (id: number, newPassword: string) => api.put(`/admin/users/${id}/password`, { new_password: newPassword }),
 };
 
 export const notificationsAPI = {

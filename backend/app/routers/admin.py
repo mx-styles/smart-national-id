@@ -599,3 +599,228 @@ async def get_all_appointments(
     appointments = query.order_by(desc(Appointment.created_at)).offset(offset).limit(limit).all()
     
     return appointments
+
+# ==================== User Management Endpoints ====================
+
+@router.get("/users")
+async def get_all_users(
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get all users (admin only)"""
+    users = db.query(User).order_by(desc(User.created_at)).all()
+    return users
+
+@router.get("/users/{user_id}")
+async def get_user(
+    user_id: int,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get user by ID (admin only)"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    return user
+
+@router.post("/users")
+async def create_user(
+    user_data: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new user (admin only)"""
+    from app.core.security import get_password_hash
+    
+    # Check if user already exists
+    existing_user = db.query(User).filter(User.email == user_data.get("email")).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists"
+        )
+    
+    # Create new user
+    new_user = User(
+        email=user_data.get("email"),
+        first_name=user_data.get("first_name"),
+        last_name=user_data.get("last_name"),
+        national_id=user_data.get("national_id"),
+        phone_number=user_data.get("phone_number"),
+        role=user_data.get("role", "citizen"),
+        hashed_password=get_password_hash(user_data.get("password")),
+        is_active=True
+    )
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    # Log audit action
+    log_audit_action(
+        db=db,
+        action=AuditAction.create,
+        entity_type="user",
+        entity_id=new_user.id,
+        description=f"Created user: {new_user.email}",
+        user_id=admin_user.id,
+        target_user_id=new_user.id
+    )
+    
+    return new_user
+
+@router.put("/users/{user_id}")
+async def update_user(
+    user_id: int,
+    user_data: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Update user (admin only)"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Update user fields
+    if "first_name" in user_data:
+        user.first_name = user_data["first_name"]
+    if "last_name" in user_data:
+        user.last_name = user_data["last_name"]
+    if "national_id" in user_data:
+        user.national_id = user_data["national_id"]
+    if "phone_number" in user_data:
+        user.phone_number = user_data["phone_number"]
+    if "role" in user_data:
+        user.role = user_data["role"]
+    
+    db.commit()
+    db.refresh(user)
+    
+    # Log audit action
+    log_audit_action(
+        db=db,
+        action=AuditAction.update,
+        entity_type="user",
+        entity_id=user.id,
+        description=f"Updated user: {user.email}",
+        user_id=admin_user.id,
+        target_user_id=user.id
+    )
+    
+    return user
+
+@router.put("/users/{user_id}/status")
+async def toggle_user_status(
+    user_id: int,
+    status_data: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Toggle user active status (admin only)"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    user.is_active = status_data.get("is_active", True)
+    db.commit()
+    db.refresh(user)
+    
+    # Log audit action
+    log_audit_action(
+        db=db,
+        action=AuditAction.update,
+        entity_type="user",
+        entity_id=user.id,
+        description=f"{'Activated' if user.is_active else 'Deactivated'} user: {user.email}",
+        user_id=admin_user.id,
+        target_user_id=user.id
+    )
+    
+    return user
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Delete user (admin only)"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Prevent deleting yourself
+    if user.id == admin_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own account"
+        )
+    
+    email = user.email
+    db.delete(user)
+    db.commit()
+    
+    # Log audit action
+    log_audit_action(
+        db=db,
+        action=AuditAction.delete,
+        entity_type="user",
+        entity_id=user_id,
+        description=f"Deleted user: {email}",
+        user_id=admin_user.id
+    )
+    
+    return {"message": "User deleted successfully"}
+
+@router.put("/users/{user_id}/password")
+async def reset_user_password(
+    user_id: int,
+    password_data: dict,
+    admin_user: User = Depends(get_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Reset user password (admin only)"""
+    from app.core.security import get_password_hash
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    new_password = password_data.get("new_password")
+    if not new_password or len(new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 6 characters"
+        )
+    
+    # Update password
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    
+    # Log audit action
+    log_audit_action(
+        db=db,
+        action=AuditAction.update,
+        entity_type="user",
+        entity_id=user.id,
+        description=f"Reset password for user: {user.email}",
+        user_id=admin_user.id,
+        target_user_id=user.id
+    )
+    
+    return {"message": "Password reset successfully"}

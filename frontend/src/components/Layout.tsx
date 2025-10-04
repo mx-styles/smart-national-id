@@ -32,7 +32,8 @@ import {
   AdminPanelSettings,
   Logout,
   AccountCircle,
-  LocationCity
+  LocationCity,
+  People
 } from '@mui/icons-material';
 import { alpha } from '@mui/material/styles';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -80,24 +81,32 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const userIsAdmin = isAdmin();
+  const userIsAdminOrStaff = user?.role === 'admin' || user?.role === 'staff';
 
   const menuItems = useMemo<MenuItemConfig[]>(() => {
-    const items: MenuItemConfig[] = [
-      { text: 'Dashboard', path: '/dashboard', icon: Dashboard },
-      { text: 'Book Appointment', path: '/book-appointment', icon: EventNote },
-      { text: 'My Appointments', path: '/appointments', icon: EventAvailable },
-      { text: 'My Queue', path: '/my-queue', icon: Queue }
-    ];
+    const items: MenuItemConfig[] = [];
 
+    // Only show citizen-specific pages for non-admin/non-staff users
+    if (!userIsAdminOrStaff) {
+      items.push(
+        { text: 'Dashboard', path: '/dashboard', icon: Dashboard },
+        { text: 'Book Appointment', path: '/book-appointment', icon: EventNote },
+        { text: 'My Appointments', path: '/appointments', icon: EventAvailable },
+        { text: 'My Queue', path: '/my-queue', icon: Queue }
+      );
+    }
+
+    // Show admin pages for admin and staff users
     if (userIsAdmin) {
       items.push(
         { text: 'Admin Panel', path: '/admin', icon: AdminPanelSettings },
+        { text: 'User Management', path: '/users', icon: People },
         { text: 'Service Centers', path: '/service-centers', icon: LocationCity, mobile: false }
       );
     }
 
     return items;
-  }, [userIsAdmin]);
+  }, [userIsAdmin, userIsAdminOrStaff]);
 
   const mobileNavItems = useMemo(
     () => menuItems.filter((item) => item.mobile !== false),
@@ -116,7 +125,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     );
   }, [location.pathname, menuItems]);
 
-  const activeNavValue = activeMenuItem?.path ?? '/dashboard';
+  const activeNavValue = activeMenuItem?.path ?? (userIsAdminOrStaff ? '/admin' : '/dashboard');
+
+  const getPageTitle = () => {
+    if (isMobile) {
+      return activeMenuItem?.text ?? 'Smart e-National ID';
+    }
+    return userIsAdminOrStaff ? 'Admin Dashboard' : 'Queue Management Platform';
+  };
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', py: 3 }}>
@@ -129,13 +145,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </Typography>
       </Box>
       <Divider sx={{ borderColor: alpha('#f8fafc', 0.08), mb: 2 }} />
-      <List sx={{ px: 1, flex: 1, display: 'grid', gap: 0.5 }}>
+      <List sx={{ px: 1, flex: 1 }}>
         {menuItems.map((item) => {
           const IconComponent = item.icon;
           const selected =
             location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
           return (
-            <ListItem key={item.text} disablePadding sx={{ mt: 0.5 }}>
+            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
               <ListItemButton
                 selected={selected}
                 onClick={() => {
@@ -173,33 +189,35 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         })}
       </List>
       <Box sx={{ px: 3, pt: 2 }}>
-        <Box
-          sx={{
-            p: 2,
-            borderRadius: 3,
-            background: alpha('#1e293b', 0.85),
-            color: '#e2e8f0',
-            display: 'grid',
-            gap: 1.2
-          }}
-        >
-          <Box>
-            <Typography variant="subtitle2" sx={{ color: '#cbd5f5', mb: 0.5 }}>
-              Need assistance?
-            </Typography>
-            <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.75) }}>
-              Track appointments, queues, and manage service centres in one place.
-            </Typography>
-          </Box>
-          <Button
-            variant="contained"
-            color="secondary"
-            fullWidth
-            onClick={() => navigate('/book-appointment')}
+        {!userIsAdminOrStaff && (
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 3,
+              background: alpha('#1e293b', 0.85),
+              color: '#e2e8f0',
+              display: 'grid',
+              gap: 1.2
+            }}
           >
-            Book Appointment
-          </Button>
-        </Box>
+            <Box>
+              <Typography variant="subtitle2" sx={{ color: '#cbd5f5', mb: 0.5 }}>
+                Need assistance?
+              </Typography>
+              <Typography variant="body2" sx={{ color: alpha('#e2e8f0', 0.75) }}>
+                Track appointments, queues, and manage service centres in one place.
+              </Typography>
+            </Box>
+            <Button
+              variant="contained"
+              color="secondary"
+              fullWidth
+              onClick={() => navigate('/book-appointment')}
+            >
+              Book Appointment
+            </Button>
+          </Box>
+        )}
       </Box>
     </Box>
   );
@@ -240,7 +258,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 textOverflow: 'ellipsis'
               }}
             >
-              {isMobile ? activeMenuItem?.text ?? 'Smart e-National ID' : 'Queue Management Platform'}
+              {getPageTitle()}
             </Typography>
           </Box>
           <Stack direction="row" spacing={2} alignItems="center">
