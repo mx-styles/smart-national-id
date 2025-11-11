@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Paper,
   Typography,
@@ -15,10 +15,6 @@ import {
   Card,
   CardContent
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocationOn, Schedule, Info } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import dayjs, { Dayjs } from 'dayjs';
@@ -43,8 +39,6 @@ interface ServiceCenter {
 interface AppointmentFormData {
   service_center_id: string;
   appointment_type: string;
-  appointment_date: Dayjs | null;
-  scheduled_time: Dayjs | null;
   special_requirements: string;
 }
 
@@ -57,12 +51,12 @@ const BookAppointment: React.FC = () => {
   const [formData, setFormData] = useState<AppointmentFormData>({
     service_center_id: '',
     appointment_type: '',
-    appointment_date: null,
-    scheduled_time: null,
     special_requirements: ''
   });
   const [serviceCenters, setServiceCenters] = useState<ServiceCenter[]>([]);
-  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [assignedSlot, setAssignedSlot] = useState<{ date: Dayjs; time: string } | null>(null);
+  const [slotLookupMessage, setSlotLookupMessage] = useState('');
+  const [assigningSlot, setAssigningSlot] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingCenters, setLoadingCenters] = useState(true);
   const [error, setError] = useState('');
@@ -80,12 +74,6 @@ const BookAppointment: React.FC = () => {
     fetchServiceCenters();
   }, []);
 
-  useEffect(() => {
-    if (formData.service_center_id && formData.appointment_date) {
-      fetchAvailableSlots();
-    }
-  }, [formData.service_center_id, formData.appointment_date]);
-
   const fetchServiceCenters = async () => {
     try {
       const response = await serviceCentersAPI.getAll();
@@ -97,21 +85,47 @@ const BookAppointment: React.FC = () => {
     }
   };
 
-  const fetchAvailableSlots = async () => {
+  const assignFirstAvailableSlot = useCallback(async () => {
+    const centerId = Number(formData.service_center_id);
+    if (!centerId) return;
+
+    setAssigningSlot(true);
+    setSlotLookupMessage('Searching for the next available slot...');
+    setAssignedSlot(null);
+
+    const maxLookaheadDays = 30;
+
     try {
-      if (!formData.appointment_date) return;
-      const dateStr = formData.appointment_date.format('YYYY-MM-DD');
-      const response = await serviceCentersAPI.getAvailableSlots(
-        Number(formData.service_center_id),
-        dateStr
-      );
-      // API returns { available_slots: string[], date, service_center_id }
-      setAvailableSlots(response.data?.available_slots || []);
-    } catch (error) {
-      console.error('Failed to fetch available slots:', error);
-      setAvailableSlots([]);
+      for (let offset = 0; offset <= maxLookaheadDays; offset += 1) {
+        const targetDate = dayjs().add(offset, 'day');
+        const response = await serviceCentersAPI.getAvailableSlots(centerId, targetDate.format('YYYY-MM-DD'));
+        const slots: string[] = response.data?.available_slots || [];
+
+        if (slots.length > 0) {
+          const firstSlot = slots[0];
+          setAssignedSlot({ date: targetDate, time: firstSlot });
+          setSlotLookupMessage('We reserved the earliest available slot for you.');
+          return;
+        }
+      }
+
+      setSlotLookupMessage('No available slots found in the next 30 days. You can try another center.');
+    } catch (err) {
+      console.error('Failed to assign available slot:', err);
+      setSlotLookupMessage('Unable to fetch available slots right now. Please try again.');
+    } finally {
+      setAssigningSlot(false);
     }
-  };
+  }, [formData.service_center_id]);
+
+  useEffect(() => {
+    if (formData.service_center_id) {
+      assignFirstAvailableSlot();
+    } else {
+      setAssignedSlot(null);
+      setSlotLookupMessage('');
+    }
+  }, [formData.service_center_id, assignFirstAvailableSlot]);
 
   const handleChange = (field: keyof AppointmentFormData, value: any) => {
     setFormData(prev => ({
@@ -119,6 +133,10 @@ const BookAppointment: React.FC = () => {
       [field]: value
     }));
     setError('');
+    if (field === 'service_center_id') {
+      setAssignedSlot(null);
+      setSlotLookupMessage('');
+    }
   };
 
   const validateForm = (): boolean => {
@@ -130,51 +148,9 @@ const BookAppointment: React.FC = () => {
       setError('Please select an appointment type');
       return false;
     }
-    if (!formData.appointment_date) {
-      setError('Please select a date');
+    if (!assignedSlot) {
+      setError('No available slot has been assigned. Please try again or select a different center.');
       return false;
-    }
-    if (!formData.scheduled_time) {
-      setError('Please select a time');
-      return false;
-    }
-    
-    // Check if selected date is not in the past
-    if (formData.appointment_date.isBefore(dayjs(), 'day')) {
-      setError('Cannot book appointments for past dates');
-      return false;
-    }
-
-    // Check if selected time is not in the past for today's appointments
-    if (formData.appointment_date.isSame(dayjs(), 'day')) {
-      const appointmentDateTime = formData.appointment_date
-        .hour(formData.scheduled_time.hour())
-        .minute(formData.scheduled_time.minute());
-      
-      if (appointmentDateTime.isBefore(dayjs())) {
-        setError('Cannot book appointments for past times');
-        return false;
-      }
-    }
-
-    // Check if time is within operating hours  
-    if (selectedCenter) {
-      const openingHour = parseInt(selectedCenter.opening_time.split(':')[0]);
-      const openingMinute = parseInt(selectedCenter.opening_time.split(':')[1]);
-      const closingHour = parseInt(selectedCenter.closing_time.split(':')[0]);
-      const closingMinute = parseInt(selectedCenter.closing_time.split(':')[1]);
-      
-      const selectedHour = formData.scheduled_time.hour();
-      const selectedMinute = formData.scheduled_time.minute();
-      
-      const selectedTimeMinutes = selectedHour * 60 + selectedMinute;
-      const openingTimeMinutes = openingHour * 60 + openingMinute;
-      const closingTimeMinutes = closingHour * 60 + closingMinute;
-      
-      if (selectedTimeMinutes < openingTimeMinutes || selectedTimeMinutes > closingTimeMinutes) {
-        setError(`Appointment time must be between ${selectedCenter.opening_time.substring(0, 5)} and ${selectedCenter.closing_time.substring(0, 5)}`);
-        return false;
-      }
     }
 
     return true;
@@ -191,23 +167,17 @@ const BookAppointment: React.FC = () => {
     setError('');
 
     try {
-      // Combine date and time
-      if (!formData.appointment_date || !formData.scheduled_time) {
-        setError('Please select both date and time');
+      if (!assignedSlot) {
+        setError('No available slot has been assigned. Please try again.');
         return;
       }
-      
-      const scheduledDateTime = formData.appointment_date
-        .hour(formData.scheduled_time.hour())
-        .minute(formData.scheduled_time.minute())
-        .second(0);
 
       const appointmentData = {
         service_center_id: Number(formData.service_center_id),
         appointment_type: formData.appointment_type,
-        appointment_date: formData.appointment_date.format('YYYY-MM-DD'),
+        appointment_date: assignedSlot.date.format('YYYY-MM-DD'),
         // Backend expects a time (HH:mm[:ss]) not a full ISO datetime
-        scheduled_time: scheduledDateTime.format('HH:mm:ss'),
+        scheduled_time: dayjs(`${assignedSlot.date.format('YYYY-MM-DD')}T${assignedSlot.time}`).format('HH:mm:ss'),
         special_requirements: formData.special_requirements || null
       };
 
@@ -254,214 +224,175 @@ const BookAppointment: React.FC = () => {
   }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <PageContainer
-        title="Book an appointment"
-        description="Choose a service centre, pick a timeslot within operating hours, and we'll handle the rest."
-        actions={
-          selectedCenter && (
-            <Button variant="contained" color="secondary" onClick={() => navigate('/appointments')}>
-              View my appointments
-            </Button>
-          )
-        }
-        maxWidth="md"
-      >
-        <Paper elevation={0} sx={{ p: { xs: 3, md: 4 } }}>
-          <Typography variant="h5" gutterBottom>
-            Appointment details
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-            Select your preferred centre, date, and time to reserve your slot.
-          </Typography>
+    <PageContainer
+      title="Book an appointment"
+      description="Choose a service centre and we'll reserve the first available slot for you."
+      actions={
+        selectedCenter && (
+          <Button variant="contained" color="secondary" onClick={() => navigate('/appointments')}>
+            View my appointments
+          </Button>
+        )
+      }
+      maxWidth="md"
+    >
+      <Paper elevation={0} sx={{ p: { xs: 3, md: 4 } }}>
+        <Typography variant="h5" gutterBottom>
+          Appointment details
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+          Select your preferred centre and we will automatically reserve the earliest free timeslot available.
+        </Typography>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
-          <Box component="form" onSubmit={handleSubmit}>
-            <Grid container spacing={3}>
-              {/* Service Center Selection */}
-              <Grid item xs={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Service Center</InputLabel>
-                  <Select
-                    value={formData.service_center_id}
-                    label="Service Center"
-                    onChange={(e) => handleChange('service_center_id', e.target.value)}
-                    disabled={loading}
-                  >
-                    {serviceCenters.map((center) => (
-                      <MenuItem key={center.id} value={center.id}>
-                        <Box>
-                          <Typography variant="body1">{center.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {center.city}, {center.province}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Selected Center Info */}
-              {selectedCenter && (
-                <Grid item xs={12}>
-                  <Card variant="outlined">
-                    <CardContent>
-                      <Typography variant="h6" gutterBottom>
-                        {selectedCenter.name}
-                      </Typography>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <LocationOn sx={{ mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          {selectedCenter.address}, {selectedCenter.city}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <Schedule sx={{ mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          Operating Hours: {selectedCenter.opening_time?.substring(0, 5) || '08:00'} - {selectedCenter.closing_time?.substring(0, 5) || '16:30'}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Info sx={{ mr: 1, color: 'text.secondary' }} />
-                        <Typography variant="body2">
-                          Daily Capacity: {selectedCenter.max_daily_capacity} appointments
-                        </Typography>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              )}
-
-              {/* Appointment Type */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Appointment Type</InputLabel>
-                  <Select
-                    value={formData.appointment_type}
-                    label="Appointment Type"
-                    onChange={(e) => handleChange('appointment_type', e.target.value)}
-                    disabled={loading}
-                  >
-                    {appointmentTypes.map((type) => (
-                      <MenuItem key={type.value} value={type.value}>
-                        {type.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Date Selection */}
-              <Grid item xs={12} sm={6}>
-                <DatePicker
-                  label="Appointment Date"
-                  value={formData.appointment_date}
-                  onChange={(value) => handleChange('appointment_date', value)}
-                  minDate={dayjs()}
-                  maxDate={dayjs().add(30, 'day')}
+        <Box component="form" onSubmit={handleSubmit}>
+          <Grid container spacing={3}>
+            {/* Service Center Selection */}
+            <Grid item xs={12}>
+              <FormControl fullWidth required>
+                <InputLabel>Service Center</InputLabel>
+                <Select
+                  value={formData.service_center_id}
+                  label="Service Center"
+                  onChange={(e) => handleChange('service_center_id', e.target.value)}
                   disabled={loading}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true,
-                    },
-                  }}
-                />
-              </Grid>
-
-              {/* Time Selection */}
-              <Grid item xs={12} sm={6}>
-                <TimePicker
-                  label="Preferred Time"
-                  value={formData.scheduled_time}
-                  onChange={(value) => handleChange('scheduled_time', value)}
-                  minTime={(() => {
-                    if (!selectedCenter) return dayjs().hour(8).minute(0);
-                    
-                    const openingHour = parseInt(selectedCenter.opening_time.split(':')[0]);
-                    const openingMinute = parseInt(selectedCenter.opening_time.split(':')[1]);
-                    let minTime = dayjs().hour(openingHour).minute(openingMinute);
-                    
-                    // If appointment is today, use current time if it's later than opening time
-                    if (formData.appointment_date?.isSame(dayjs(), 'day')) {
-                      const currentTime = dayjs();
-                      if (currentTime.isAfter(minTime)) {
-                        minTime = currentTime.add(15, 'minute'); // Add buffer time
-                      }
-                    }
-                    
-                    return minTime;
-                  })()}
-                  maxTime={selectedCenter ? 
-                    dayjs().hour(parseInt(selectedCenter.closing_time.split(':')[0]))
-                           .minute(parseInt(selectedCenter.closing_time.split(':')[1])) :
-                    dayjs().hour(16).minute(30)
-                  }
-                  disabled={loading || !formData.appointment_date || !formData.service_center_id}
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true,
-                    },
-                  }}
-                />
-              </Grid>
-
-              {/* Available Slots Info */}
-              {availableSlots.length > 0 && (
-                <Grid item xs={12} sm={6}>
-                  <Alert severity="info">
-                    {availableSlots.length} slots available on selected date
-                  </Alert>
-                </Grid>
-              )}
-
-              {/* Special Requirements */}
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={3}
-                  label="Special Requirements (Optional)"
-                  placeholder="e.g., wheelchair accessibility, interpreter needed, etc."
-                  value={formData.special_requirements}
-                  onChange={(e) => handleChange('special_requirements', e.target.value)}
-                  disabled={loading}
-                />
-              </Grid>
-
-              {/* Submit Button */}
-              <Grid item xs={12}>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => navigate('/dashboard')}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={loading}
-                    startIcon={loading && <CircularProgress size={20} />}
-                    sx={{ minWidth: 150 }}
-                  >
-                    {loading ? 'Booking...' : 'Book Appointment'}
-                  </Button>
-                </Box>
-              </Grid>
+                >
+                  {serviceCenters.map((center) => (
+                    <MenuItem key={center.id} value={center.id}>
+                      <Box>
+                        <Typography variant="body1">{center.name}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {center.city}, {center.province}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
-          </Box>
-        </Paper>
-      </PageContainer>
-    </LocalizationProvider>
+
+            {/* Selected Center Info */}
+            {selectedCenter && (
+              <Grid item xs={12}>
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {selectedCenter.name}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <LocationOn sx={{ mr: 1, color: 'text.secondary' }} />
+                      <Typography variant="body2">
+                        {selectedCenter.address}, {selectedCenter.city}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Schedule sx={{ mr: 1, color: 'text.secondary' }} />
+                      <Typography variant="body2">
+                        Operating Hours: {selectedCenter.opening_time?.substring(0, 5) || '08:00'} - {selectedCenter.closing_time?.substring(0, 5) || '16:30'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Info sx={{ mr: 1, color: 'text.secondary' }} />
+                      <Typography variant="body2">
+                        Daily Capacity: {selectedCenter.max_daily_capacity} appointments
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            )}
+
+            {/* Slot Assignment Status */}
+            {formData.service_center_id && (
+              <Grid item xs={12}>
+                <Alert severity={assignedSlot ? 'success' : 'info'}>
+                  {assigningSlot ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={18} />
+                      <Typography variant="body2">{slotLookupMessage || 'Searching for available slots...'}</Typography>
+                    </Box>
+                  ) : assignedSlot ? (
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        Reserved Slot
+                      </Typography>
+                      <Typography variant="body2">
+                        {assignedSlot.date.format('dddd, MMM D, YYYY')} at {dayjs(`${assignedSlot.date.format('YYYY-MM-DD')}T${assignedSlot.time}`).format('HH:mm')}
+                      </Typography>
+                      <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                        {slotLookupMessage}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2">{slotLookupMessage || 'No available slots found yet.'}</Typography>
+                  )}
+                </Alert>
+              </Grid>
+            )}
+
+            {/* Appointment Type */}
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth required>
+                <InputLabel>Appointment Type</InputLabel>
+                <Select
+                  value={formData.appointment_type}
+                  label="Appointment Type"
+                  onChange={(e) => handleChange('appointment_type', e.target.value)}
+                  disabled={loading}
+                >
+                  {appointmentTypes.map((type) => (
+                    <MenuItem key={type.value} value={type.value}>
+                      {type.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            {/* Special Requirements */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="Special Requirements (Optional)"
+                placeholder="e.g., wheelchair accessibility, interpreter needed, etc."
+                value={formData.special_requirements}
+                onChange={(e) => handleChange('special_requirements', e.target.value)}
+                disabled={loading}
+              />
+            </Grid>
+
+            {/* Submit Button */}
+            <Grid item xs={12}>
+              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => navigate('/dashboard')}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={loading}
+                  startIcon={loading && <CircularProgress size={20} />}
+                  sx={{ minWidth: 150 }}
+                >
+                  {loading ? 'Booking...' : 'Book Appointment'}
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
+    </PageContainer>
   );
 };
 
